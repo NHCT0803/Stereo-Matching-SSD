@@ -7,8 +7,10 @@
 # Licensed under the MIT License
 import numpy as np
 from PIL import Image
+import matplotlib.pyplot as plt
+#plt.ion()
 
-def stereo_match(left_img, right_img, kernel, max_offset):
+def stereo_match(left_img, right_img, kernel_half, max_offset):
     # Load in both images, assumed to be RGBA 8bit per channel images
     left_img = Image.open(left_img).convert('L')
     left = np.asarray(left_img)
@@ -20,17 +22,25 @@ def stereo_match(left_img, right_img, kernel, max_offset):
     depth = np.zeros((w, h), np.uint8)
     depth.shape = h, w
        
-    kernel_half = int(kernel / 2)    
+    kernel_half = int(kernel_half)    
     offset_adjust = 255 / max_offset  # this is used to map depth map output to 0-255 range
       
-    for y in range(kernel_half, h - kernel_half):      
+    f, axarr = plt.subplots(2,2)
+    axarr[0,0].title.set_text('left')
+    axarr[0,1].title.set_text('right')
+    axarr[1,0].title.set_text('disparity map')
+    axarr[1,1].axis('off')
+    
+    for y in range(kernel_half, h - kernel_half):      #iterate rows
         print(".", end="", flush=True)  # let the user know that something is happening (slowly!)
         
-        for x in range(kernel_half, w - kernel_half):
+        for x in range(kernel_half, w - kernel_half):   #iterate collumns
+            rgb_left = np.stack((left,)*3, axis=-1)
+            rgb_right = np.stack((right,)*3, axis=-1)
             best_offset = 0
-            prev_ssd = 65534
+            prev_ssd = 65534    #256 squared
             
-            for offset in range(max_offset):               
+            for offset in range(max_offset):        #iterate disparities
                 ssd = 0
                 ssd_temp = 0                            
                 
@@ -51,13 +61,21 @@ def stereo_match(left_img, right_img, kernel, max_offset):
                 if ssd < prev_ssd:
                     prev_ssd = ssd
                     best_offset = offset
-                            
+
+            rgb_left[y-kernel_half:y+kernel_half, x-kernel_half:x+kernel_half] = [255,0,0]
+            rgb_right[y-kernel_half:y+kernel_half, x-best_offset-kernel_half:x-best_offset+kernel_half] = [0,255,0]
+            axarr[0,0].imshow(rgb_left)
+            axarr[0,1].imshow(rgb_right)
             # set depth output for this x,y location to the best match
             depth[y, x] = best_offset * offset_adjust
-                                
+            
+            axarr[1,0].imshow(depth, 'gray')
+            plt.pause(0.0001)
+
     # Convert to PIL and save it
+    plt.show()
     Image.fromarray(depth).save('depth.png')
 
 if __name__ == '__main__':
-    stereo_match("view0.png", "view1.png", 6, 30)  # 6x6 local search kernel, 30 pixel search range
+    stereo_match("view0.png", "view1.png", 3, 40) 
 
