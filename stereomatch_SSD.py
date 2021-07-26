@@ -30,13 +30,15 @@ def stereo_match(left_img, right_img, kernel_half, max_offset):
     axarr[0,1].title.set_text('right')
     axarr[1,0].title.set_text('disparity map')
     axarr[1,1].axis('off')
+    axarr[0,0].imshow(left,'gray')
+    axarr[0,1].imshow(right,'gray')
     
     for y in range(kernel_half, h - kernel_half):      #iterate rows
         print(".", end="", flush=True)  # let the user know that something is happening (slowly!)
         
         for x in range(kernel_half, w - kernel_half):   #iterate collumns
-            rgb_left = np.stack((left,)*3, axis=-1)
-            rgb_right = np.stack((right,)*3, axis=-1)
+            #rgb_left = np.stack((left,)*3, axis=-1)
+            #rgb_right = np.stack((right,)*3, axis=-1)
             best_offset = 0
             prev_ssd = 65534    #256 squared
             
@@ -62,15 +64,13 @@ def stereo_match(left_img, right_img, kernel_half, max_offset):
                     prev_ssd = ssd
                     best_offset = offset
 
-            rgb_left[y-kernel_half:y+kernel_half, x-kernel_half:x+kernel_half] = [255,0,0]
-            rgb_right[y-kernel_half:y+kernel_half, x-best_offset-kernel_half:x-best_offset+kernel_half] = [0,255,0]
-            axarr[0,0].imshow(rgb_left)
-            axarr[0,1].imshow(rgb_right)
+            #rgb_left[y-kernel_half:y+kernel_half, x-kernel_half:x+kernel_half] = [255,0,0]
+            #rgb_right[y-kernel_half:y+kernel_half, x-best_offset-kernel_half:x-best_offset+kernel_half] = [0,255,0]
             # set depth output for this x,y location to the best match
             depth[y, x] = best_offset * offset_adjust
             
-            axarr[1,0].imshow(depth, 'gray')
-            plt.pause(0.0001)
+        axarr[1,0].imshow(depth, 'gray')
+        plt.pause(0.0001)
 
     # Convert to PIL and save it
     plt.show()
